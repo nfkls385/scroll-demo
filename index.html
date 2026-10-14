@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#fbf4ef">
+<title>滑動展示</title>
+<style>
+  :root {
+    --ink: #2f2a3a;          /* 主文字：深紫灰 */
+    --ink-soft: #6f6878;     /* 副標題／提示 */
+    --accent: #d9708a;       /* 點綴：柔和櫻桃粉 */
+    --dot: rgba(47, 42, 58, .22);
+    --duration: 700ms;       /* 淡入淡出時間 */
+    --ease: cubic-bezier(.22, .61, .36, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;              /* 不使用原生頁面捲動 */
+    overscroll-behavior: none;     /* 阻止回彈及下拉重新整理 */
+  }
+
+  body {
+    color: var(--ink);
+    font-family: 'PingFang HK', 'PingFang TC', 'Noto Sans TC', 'Noto Sans CJK TC',
+                 'Microsoft JhengHei', 'Heiti TC', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    /* 柔和漸變背景：奶油白 → 淡粉 → 淡藍 */
+    background:
+      radial-gradient(60vmax 60vmax at 12% 8%, rgba(255, 214, 196, .55), transparent 60%),
+      radial-gradient(55vmax 55vmax at 92% 95%, rgba(206, 220, 250, .6), transparent 60%),
+      linear-gradient(160deg, #fdf7f1 0%, #f9eff3 52%, #eff3fb 100%);
+    background-attachment: fixed;
+  }
+
+  .stage {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100vh;                 /* 後備 */
+    height: 100dvh;                /* 動態視窗高度（流動裝置網址列） */
+    overflow: hidden;
+    touch-action: none;            /* 由腳本處理觸控手勢 */
+    overscroll-behavior: none;
+    user-select: none;
+    -webkit-user-select: none;
+    outline: none;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: max(24px, env(safe-area-inset-top)) clamp(24px, 8vw, 96px) max(24px, env(safe-area-inset-bottom));
+    opacity: 0;
+    visibility: hidden;
+    /* 預設：從右側進入（向前翻頁） */
+    transform: translateX(28px);
+    transition:
+      opacity var(--duration) var(--ease),
+      transform var(--duration) var(--ease),
+      visibility 0s linear var(--duration);
+  }
+  /* 向後翻頁時，新頁從左側淡入；離開的頁向右飄走 */
+  .stage.is-back .slide:not(.is-active) { transform: translateX(-28px); }
+  .stage.is-back .slide.is-leaving       { transform: translateX(28px); }
+  /* 向前翻頁：離開的頁向左飄走 */
+  .stage:not(.is-back) .slide.is-leaving { transform: translateX(-28px); }
+
+  .slide.is-active {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition:
+      opacity var(--duration) var(--ease) 120ms,
+      transform var(--duration) var(--ease) 120ms,
+      visibility 0s;
+  }
+
+  .slide__title {
+    margin: 0;
+    font-size: clamp(2.6rem, 11vw, 6.5rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: .06em;
+    text-indent: .06em;            /* 抵消字距，令文字視覺置中 */
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+  .slide__title::after {
+    content: "";
+    display: block;
+    width: clamp(36px, 5vw, 56px);
+    height: 4px;
+    margin: clamp(18px, 3vh, 28px) auto 0;
+    border-radius: 2px;
+    background: var(--accent);
+    opacity: .75;
+  }
+  .slide__subtitle {
+    margin: clamp(14px, 2.4vh, 22px) 0 0;
+    max-width: 32em;
+    font-size: clamp(1rem, 2.4vw, 1.4rem);
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: .04em;
+    color: var(--ink-soft);
+  }
+
+  /* 全屏插圖頁：contain 完整顯示，背景漸變露邊 */
+  .slide--image {
+    padding: max(12px, env(safe-area-inset-top)) clamp(12px, 4vw, 32px) max(12px, env(safe-area-inset-bottom));
+  }
+  .slide__image {
+    display: block;
+    width: min(100%, 920px);
+    height: min(100%, calc(100dvh - 48px));
+    max-height: calc(100vh - 48px);
+    object-fit: contain;
+    object-position: center;
+    border-radius: clamp(12px, 2vw, 24px);
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
+  }
+
+  /* 第一頁的「往右」提示 */
+  .hint {
+    position: absolute;
+    left: 50%;
+    bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    font-size: clamp(.8rem, 1.6vw, .95rem);
+    letter-spacing: .3em;
+    text-indent: .3em;
+    color: var(--ink-soft);
+    opacity: .75;
+  }
+  .hint__arrow {
+    width: 12px;
+    height: 12px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    /* 指向右：由向下箭頭旋轉 -45deg 變成向右 */
+    transform: rotate(-45deg);
+    animation: nudge 1.8s var(--ease) infinite;
+    flex-shrink: 0;
+  }
+  @keyframes nudge {
+    0%, 100% { transform: translateX(-3px) rotate(-45deg); opacity: .5; }
+    50%      { transform: translateX(4px)  rotate(-45deg); opacity: 1; }
+  }
+
+  /* 進度圓點（頂部置中） */
+  .dots {
+    position: fixed;
+    top: max(16px, calc(env(safe-area-inset-top) + 10px));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    z-index: 2;
+  }
+  .dots button {
+    display: block;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+  }
+  .dots button::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--dot);
+    transform: translate(-50%, -50%);
+    transition: background .3s, width .3s var(--ease);
+  }
+  .dots button[aria-current="true"]::before {
+    background: var(--accent);
+    width: 20px;
+    border-radius: 4px;
+  }
+  .dots button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  @media (max-width: 600px) {
+    .dots { top: max(12px, calc(env(safe-area-inset-top) + 8px)); gap: 8px; }
+  }
+
+  /* 減少動態效果：即時切換 */
+  @media (prefers-reduced-motion: reduce) {
+    .slide, .slide.is-active, .dots button::before { transition: none !important; }
+    .slide, .stage .slide:not(.is-active), .stage .slide.is-leaving { transform: none !important; }
+    .hint__arrow { animation: none; transform: rotate(-45deg); }
+  }
+</style>
+</head>
+<body>
+  <main class="stage" id="stage" tabindex="-1" aria-roledescription="輪播" aria-label="內容展示"></main>
+  <nav aria-label="頁面導覽"><ol class="dots" id="dots"></ol></nav>
+
+<script>
+/* =====================================================================
+ * 內容設定 — 只需修改此陣列即可。
+ *   title    : 大標題（必填）
+ *   subtitle : 副標題（選填，留空則不顯示）
+ * 新增或刪除項目後，頁面及頂部進度圓點會自動更新。
+ * ===================================================================== */
+const sections = [
+  { type: 'text',  title: '小童好睡' },
+  { type: 'image', src: 'illustrations/sleep-kids.png',   alt: '小童好睡插圖' },
+  { type: 'text',  title: '清新櫻桃糖' },
+  { type: 'image', src: 'illustrations/cherry-candy.png', alt: '清新櫻桃糖插圖' },
+  { type: 'text',  title: '最新優惠' },
+];
+
+/* ---------------- 互動參數（一般無需修改） ---------------- */
+const CONFIG = {
+  // 動畫進行中仍可翻頁：不再用冷卻鎖定攔截新手勢。
+  // 滾輪／觸控板仍靠 gestureUsed + wheelGapMs 防止同一手勢（含慣性）連跳多段。
+  wheelThreshold: 30,     // 累積滾動量（px）達此值才翻頁
+  wheelGapMs: 200,        // 滾輪事件間隔超過此值，才視為新的手勢（用以略過慣性尾段）
+  swipeMinPx: 40,         // 觸控滑動最短距離
+};
+
+(function () {
+  'use strict';
+
+  const stage = document.getElementById('stage');
+  const dotsEl = document.getElementById('dots');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* ---------- 由陣列產生頁面 ---------- */
+  const slides = sections.map((s, i) => {
+    const el = document.createElement('section');
+    const isImage = s.type === 'image';
+    el.className = isImage ? 'slide slide--image' : 'slide';
+    el.setAttribute('aria-roledescription', '頁面');
+    const label = isImage ? (s.alt || `插圖 ${i + 1}`) : (s.title || `第 ${i + 1} 頁`);
+    el.setAttribute('aria-label', `第 ${i + 1} 頁，共 ${sections.length} 頁：${label}`);
+
+    if (isImage) {
+      const img = document.createElement('img');
+      img.className = 'slide__image';
+      img.src = s.src;
+      img.alt = s.alt || '';
+      img.decoding = 'async';
+      img.draggable = false;
+      el.appendChild(img);
+    } else {
+      const h = document.createElement(i === 0 ? 'h1' : 'h2');
+      h.className = 'slide__title';
+      h.textContent = s.title || '';
+      el.appendChild(h);
+
+      if (s.subtitle && String(s.subtitle).trim()) {
+        const p = document.createElement('p');
+        p.className = 'slide__subtitle';
+        p.textContent = s.subtitle;
+        el.appendChild(p);
+      }
+    }
+
+    if (i === 0 && sections.length > 1) {
+      const hint = document.createElement('div');
+      hint.className = 'hint';
+      hint.setAttribute('aria-hidden', 'true');
+      hint.innerHTML = '<span>往右</span><span class="hint__arrow"></span>';
+      el.appendChild(hint);
+    }
+
+    stage.appendChild(el);
+    return el;
+  });
+
+  const dots = sections.map((s, i) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button';
+    const label = s.type === 'image' ? (s.alt || `插圖 ${i + 1}`) : (s.title || `第 ${i + 1} 頁`);
+    b.setAttribute('aria-label', `前往第 ${i + 1} 頁：${label}`);
+    b.addEventListener('click', () => goTo(i));
+    li.appendChild(b);
+    dotsEl.appendChild(li);
+    return b;
+  });
+  if (sections.length < 2) dotsEl.hidden = true;
+
+  /* ---------- 狀態與切換 ---------- */
+  let index = -1;
+
+  function now() { return performance.now(); }
+
+  /* 即時打斷轉場：動畫未完也可再翻；新手勢會直接切到目標頁。 */
+  function goTo(next) {
+    next = Math.max(0, Math.min(sections.length - 1, next));
+    if (next === index) return false;
+
+    const prev = index;
+    stage.classList.toggle('is-back', prev !== -1 && next < prev);
+    slides.forEach((el, i) => {
+      el.classList.toggle('is-active', i === next);
+      el.classList.toggle('is-leaving', i === prev);
+      el.setAttribute('aria-hidden', i === next ? 'false' : 'true');
+    });
+    dots.forEach((d, i) => d.setAttribute('aria-current', i === next ? 'true' : 'false'));
+    index = next;
+    stage.dataset.index = String(next);
+    return true;
+  }
+  const step = (dir) => goTo(index + dir);
+
+  /* ---------- 滾輪／觸控板（水平優先）----------
+   * 一次觸控板輕掃會連續發出大量 wheel 事件（含慣性尾段）。
+   * 規則：
+   *  1. 優先取 deltaX（水平觸控板）；若幾乎為 0，則改用 deltaY（滑鼠滾輪）映射為水平翻頁；
+   *  2. 同一手勢內累積位移，超過門檻才翻頁一次；
+   *  3. 翻頁後，該手勢餘下的事件（包括慣性）全部略過，
+   *     直至事件之間出現 wheelGapMs 的停頓，才接受新手勢。
+   *     動畫進行中若出現新手勢，可即時打斷轉場繼續翻頁。
+   * 方向（經 dominantDelta 正規化後）：正值 → 下一頁；負值 → 上一頁。
+   * 觸控板向左／滑鼠向下 → 下一頁；觸控板向右／滑鼠向上 → 上一頁。
+   */
+  let wheelAccum = 0;
+  let lastWheelAt = -Infinity;
+  let gestureUsed = false;
+
+  function normalizeAxis(value, mode) {
+    if (mode === 1) return value * 16;                 // 行
+    if (mode === 2) return value * window.innerWidth;  // 頁（水平尺度）
+    return value;                                     // 像素
+  }
+
+  /** 取得主導軸位移：水平優先，否則改用垂直滾輪映射。
+   *  回傳值 > 0 → 下一頁；< 0 → 上一頁。
+   *  水平：向左（deltaX 負）→ 下一頁，故取 -dx；
+   *  垂直：向下（deltaY 正）→ 下一頁，保持 dy。
+   */
+  function dominantDelta(e) {
+    const dx = normalizeAxis(e.deltaX, e.deltaMode);
+    const dy = normalizeAxis(e.deltaY, e.deltaMode);
+    if (Math.abs(dx) >= Math.abs(dy)) return -dx; // 向左＝下一頁
+    return dy; // 滑鼠滾輪：向下＝下一頁，向上＝上一頁
+  }
+
+  window.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (e.ctrlKey) return; // 觸控板雙指縮放
+    const t = now();
+    const d = dominantDelta(e);
+    const newGesture = t - lastWheelAt > CONFIG.wheelGapMs;
+    lastWheelAt = t;
+
+    if (newGesture) { gestureUsed = false; wheelAccum = 0; }
+    if (gestureUsed) {
+      // 同一手勢的慣性尾段：略過，等待真正的停頓後才接受新手勢
+      wheelAccum = 0;
+      return;
+    }
+    if (d === 0) return;
+    if (wheelAccum !== 0 && Math.sign(d) !== Math.sign(wheelAccum)) wheelAccum = 0;
+    wheelAccum += d;
+
+    if (Math.abs(wheelAccum) >= CONFIG.wheelThreshold) {
+      // dominantDelta > 0 → 下一頁
+      step(wheelAccum > 0 ? 1 : -1);
+      gestureUsed = true;
+      wheelAccum = 0;
+    }
+  }, { passive: false });
+
+  /* ---------- 觸控（水平滑動）----------
+   * 「向左滑」＝手指往左移動 → 下一頁；
+   * 「向右滑」＝手指往右移動 → 上一頁。
+   */
+  let touchStart = null;
+
+  stage.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { touchStart = null; return; }
+    const p = e.touches[0];
+    touchStart = { x: p.clientX, y: p.clientY };
+  }, { passive: true });
+
+  // 阻止原生捲動、回彈及下拉重新整理
+  document.addEventListener('touchmove', (e) => {
+    if (e.cancelable) e.preventDefault();
+  }, { passive: false });
+
+  stage.addEventListener('touchend', (e) => {
+    if (!touchStart) return;
+    const p = e.changedTouches[0];
+    const dx = p.clientX - touchStart.x;
+    const dy = p.clientY - touchStart.y;
+    touchStart = null;
+    // 必須以水平為主，且達到最短距離
+    if (Math.abs(dx) < CONFIG.swipeMinPx || Math.abs(dx) < Math.abs(dy)) return;
+    step(dx < 0 ? 1 : -1); // 手指往左掃 → 下一頁；往右掃 → 上一頁
+  }, { passive: true });
+
+  stage.addEventListener('touchcancel', () => { touchStart = null; }, { passive: true });
+
+  /* ---------- 鍵盤（水平導覽）---------- */
+  window.addEventListener('keydown', (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return;
+    let handled = true;
+    switch (e.key) {
+      case 'ArrowLeft':  case 'PageDown': step(1); break;   // 向左鍵／下頁＝下一頁（配合向左滑）
+      case 'ArrowRight': case 'PageUp':   step(-1); break;  // 向右鍵／上頁＝上一頁
+      case ' ': case 'Spacebar':
+        if (tag === 'BUTTON') { handled = false; break; } // 讓空白鍵可啟動圓點按鈕
+        step(e.shiftKey ? -1 : 1); break;
+      case 'Home': goTo(0); break;
+      case 'End':  goTo(sections.length - 1); break;
+      default: handled = false;
+    }
+    if (handled) e.preventDefault();
+  });
+
+  /* ---------- 初始化 ---------- */
+  goTo(0);
+  stage.focus({ preventScroll: true });
+})();
+</script>
+</body>
+</html>
