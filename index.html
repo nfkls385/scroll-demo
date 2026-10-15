@@ -90,13 +90,14 @@
 
   .slide__title {
     margin: 0;
-    font-size: clamp(2.6rem, 11vw, 6.5rem);
+    font-size: clamp(1.55rem, 6.2vw, 3.4rem);
     font-weight: 800;
-    line-height: 1.15;
+    line-height: 1.35;
     letter-spacing: .06em;
     text-indent: .06em;            /* 抵消字距，令文字視覺置中 */
     word-break: keep-all;
     overflow-wrap: anywhere;
+    white-space: pre-line;
   }
   .slide__title::after {
     content: "";
@@ -342,7 +343,7 @@
  * 新增或刪除項目後，頁面及頂部進度圓點會自動更新。
  * ===================================================================== */
 const sections = [
-  { type: 'text', title: '以下是一篇特別新聞報道：羅浮宮設施殘舊，館長要求10億歐元翻新，否則面臨倒閉' },
+  { type: 'text', title: '以下是一篇特別新聞報道\n羅浮宮設施殘舊\n館長要求10億歐元翻新\n否則面臨倒閉' },
 ];
 
 /* ---------------- 互動參數（一般無需修改） ---------------- */
