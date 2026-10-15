@@ -469,9 +469,10 @@ const CONFIG = {
     if (isImage) {
       const img = document.createElement('img');
       img.className = 'slide__image';
-      img.src = s.src;
+      img.dataset.src = s.src; // 懶加載：先唔設 src
       img.alt = s.alt || '';
       img.decoding = 'async';
+      img.loading = 'lazy';
       img.draggable = false;
       el.appendChild(img);
     } else if (isChoice) {
@@ -568,9 +569,27 @@ const CONFIG = {
     dots.forEach((d, i) => d.setAttribute('aria-current', i === next ? 'true' : 'false'));
     index = next;
     stage.dataset.index = String(next);
+    hydrateNearby(next);
     return true;
   }
   const step = (dir) => goTo(index + dir);
+
+  /* 懶加載：只載入當前頁及前後一頁的圖片；離開窗口的卸掉 src 以省記憶體。 */
+  function hydrateNearby(center) {
+    const lo = Math.max(0, center - 1);
+    const hi = Math.min(slides.length - 1, center + 1);
+    slides.forEach((el, i) => {
+      const img = el.querySelector('img.slide__image');
+      if (!img) return;
+      const want = img.dataset.src;
+      if (!want) return;
+      if (i >= lo && i <= hi) {
+        if (img.getAttribute('src') !== want) img.src = want;
+      } else if (img.hasAttribute('src')) {
+        img.removeAttribute('src');
+      }
+    });
+  }
 
   /* ---------- 滾輪／觸控板（水平優先）----------
    * 一次觸控板輕掃會連續發出大量 wheel 事件（含慣性尾段）。
