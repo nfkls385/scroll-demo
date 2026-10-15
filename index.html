@@ -11,6 +11,8 @@
     --ink-soft: #6f6878;     /* 副標題／提示 */
     --accent: #d9708a;       /* 點綴：柔和櫻桃粉 */
     --dot: rgba(47, 42, 58, .22);
+    --card: rgba(255, 255, 255, .72);
+    --card-border: rgba(47, 42, 58, .08);
     --duration: 700ms;       /* 淡入淡出時間 */
     --ease: cubic-bezier(.22, .61, .36, 1);
   }
@@ -133,6 +135,108 @@
     pointer-events: none;
   }
 
+  /* 選擇頁 */
+  .slide--choice {
+    padding-top: max(64px, calc(env(safe-area-inset-top) + 48px));
+    justify-content: center;
+    touch-action: manipulation;
+  }
+  .slide--choice .slide__title {
+    font-size: clamp(2rem, 8vw, 4.2rem);
+    margin-bottom: clamp(28px, 5vh, 48px);
+  }
+  .choice-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: min(100%, 420px);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    text-align: left;
+  }
+  .choice-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 14px 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(47, 42, 58, .06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .choice-label {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+    font-size: clamp(1.05rem, 3.2vw, 1.25rem);
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: var(--ink);
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  .choice-num {
+    flex-shrink: 0;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .choice-text {
+    word-break: keep-all;
+  }
+  .copy-btn {
+    flex-shrink: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    margin: 0;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fff;
+    font: inherit;
+    font-size: clamp(.85rem, 2.4vw, .95rem);
+    font-weight: 600;
+    letter-spacing: .06em;
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background .25s var(--ease), transform .15s var(--ease);
+  }
+  .copy-btn:hover { background: #463e55; }
+  .copy-btn:active { transform: scale(.97); }
+  .copy-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .copy-btn.is-copied {
+    background: var(--accent);
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: max(28px, calc(env(safe-area-inset-bottom) + 20px));
+    transform: translateX(-50%) translateY(12px);
+    z-index: 20;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: rgba(47, 42, 58, .92);
+    color: #fff;
+    font-size: .9rem;
+    letter-spacing: .08em;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .28s var(--ease), transform .28s var(--ease);
+  }
+  .toast.is-show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
   /* 第一頁的「往右」提示 */
   .hint {
     position: absolute;
@@ -188,6 +292,7 @@
     background: transparent;
     cursor: pointer;
     position: relative;
+    pointer-events: auto;
   }
   .dots button::before {
     content: "";
@@ -210,11 +315,13 @@
 
   @media (max-width: 600px) {
     .dots { top: max(12px, calc(env(safe-area-inset-top) + 8px)); gap: 8px; }
+    .choice-item { padding: 12px 12px 12px 14px; gap: 10px; }
+    .copy-btn { padding: 9px 12px; }
   }
 
   /* 減少動態效果：即時切換 */
   @media (prefers-reduced-motion: reduce) {
-    .slide, .slide.is-active, .dots button::before { transition: none !important; }
+    .slide, .slide.is-active, .dots button::before, .toast { transition: none !important; }
     .slide, .stage .slide:not(.is-active), .stage .slide.is-leaving { transform: none !important; }
     .hint__arrow { animation: none; transform: rotate(-45deg); }
   }
@@ -223,12 +330,15 @@
 <body>
   <main class="stage" id="stage" tabindex="-1" aria-roledescription="輪播" aria-label="內容展示"></main>
   <nav aria-label="頁面導覽"><ol class="dots" id="dots"></ol></nav>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* =====================================================================
  * 內容設定 — 只需修改此陣列即可。
- *   title    : 大標題（必填）
- *   subtitle : 副標題（選填，留空則不顯示）
+ *   type: 'text' | 'image' | 'choice'
+ *   text    : { title, subtitle? }
+ *   image   : { src, alt? }
+ *   choice  : { title, options: [{ text }] }
  * 新增或刪除項目後，頁面及頂部進度圓點會自動更新。
  * ===================================================================== */
 const sections = [
@@ -237,6 +347,14 @@ const sections = [
   { type: 'text',  title: '清新櫻桃糖' },
   { type: 'image', src: 'illustrations/cherry-candy.png', alt: '清新櫻桃糖插圖' },
   { type: 'text',  title: '最新優惠' },
+  {
+    type: 'choice',
+    title: '你會買嗎？',
+    options: [
+      { text: '我會買' },
+      { text: '我不會買' },
+    ],
+  },
 ];
 
 /* ---------------- 互動參數（一般無需修改） ---------------- */
@@ -246,6 +364,7 @@ const CONFIG = {
   wheelThreshold: 30,     // 累積滾動量（px）達此值才翻頁
   wheelGapMs: 200,        // 滾輪事件間隔超過此值，才視為新的手勢（用以略過慣性尾段）
   swipeMinPx: 40,         // 觸控滑動最短距離
+  copyFeedbackMs: 1800,   // 「已複製」回饋顯示時間
 };
 
 (function () {
@@ -253,15 +372,83 @@ const CONFIG = {
 
   const stage = document.getElementById('stage');
   const dotsEl = document.getElementById('dots');
+  const toastEl = document.getElementById('toast');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  function sectionLabel(s, i) {
+    if (s.type === 'image') return s.alt || `插圖 ${i + 1}`;
+    if (s.type === 'choice') return s.title || `選擇 ${i + 1}`;
+    return s.title || `第 ${i + 1} 頁`;
+  }
+
+  /* ---------- 複製到剪貼簿（Clipboard API + 後備） ---------- */
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (_) { /* fall through */ }
+    }
+    return fallbackCopy(text);
+  }
+
+  let toastTimer = 0;
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('is-show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('is-show'), CONFIG.copyFeedbackMs);
+  }
+
+  function bindCopyButton(btn, text) {
+    let resetTimer = 0;
+    const original = btn.textContent;
+    const onActivate = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const ok = await copyText(text);
+      if (ok) {
+        btn.textContent = '已複製';
+        btn.classList.add('is-copied');
+        showToast('已複製：「' + text + '」');
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('is-copied');
+        }, CONFIG.copyFeedbackMs);
+      } else {
+        showToast('無法複製，請手動選取文字');
+      }
+    };
+    btn.addEventListener('click', onActivate);
+    // 避免 touchend 被 stage 解讀成滑動，同時確保按鈕可點
+    btn.addEventListener('touchstart', (e) => { e.stopPropagation(); }, { passive: true });
+    btn.addEventListener('touchend', (e) => { e.stopPropagation(); }, { passive: true });
+  }
 
   /* ---------- 由陣列產生頁面 ---------- */
   const slides = sections.map((s, i) => {
     const el = document.createElement('section');
     const isImage = s.type === 'image';
-    el.className = isImage ? 'slide slide--image' : 'slide';
+    const isChoice = s.type === 'choice';
+    el.className = isImage ? 'slide slide--image' : (isChoice ? 'slide slide--choice' : 'slide');
     el.setAttribute('aria-roledescription', '頁面');
-    const label = isImage ? (s.alt || `插圖 ${i + 1}`) : (s.title || `第 ${i + 1} 頁`);
+    const label = sectionLabel(s, i);
     el.setAttribute('aria-label', `第 ${i + 1} 頁，共 ${sections.length} 頁：${label}`);
 
     if (isImage) {
@@ -272,6 +459,41 @@ const CONFIG = {
       img.decoding = 'async';
       img.draggable = false;
       el.appendChild(img);
+    } else if (isChoice) {
+      const h = document.createElement('h2');
+      h.className = 'slide__title';
+      h.textContent = s.title || '';
+      el.appendChild(h);
+
+      const ul = document.createElement('ul');
+      ul.className = 'choice-list';
+      (s.options || []).forEach((opt, oi) => {
+        const li = document.createElement('li');
+        li.className = 'choice-item';
+
+        const labelEl = document.createElement('div');
+        labelEl.className = 'choice-label';
+        const num = document.createElement('span');
+        num.className = 'choice-num';
+        num.textContent = (oi + 1) + '.';
+        const txt = document.createElement('span');
+        txt.className = 'choice-text';
+        txt.textContent = opt.text || '';
+        labelEl.appendChild(num);
+        labelEl.appendChild(txt);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'copy-btn';
+        btn.textContent = '按我複製';
+        btn.setAttribute('aria-label', '複製「' + (opt.text || '') + '」');
+        bindCopyButton(btn, opt.text || '');
+
+        li.appendChild(labelEl);
+        li.appendChild(btn);
+        ul.appendChild(li);
+      });
+      el.appendChild(ul);
     } else {
       const h = document.createElement(i === 0 ? 'h1' : 'h2');
       h.className = 'slide__title';
@@ -302,7 +524,7 @@ const CONFIG = {
     const li = document.createElement('li');
     const b = document.createElement('button');
     b.type = 'button';
-    const label = s.type === 'image' ? (s.alt || `插圖 ${i + 1}`) : (s.title || `第 ${i + 1} 頁`);
+    const label = sectionLabel(s, i);
     b.setAttribute('aria-label', `前往第 ${i + 1} 頁：${label}`);
     b.addEventListener('click', () => goTo(i));
     li.appendChild(b);
@@ -397,22 +619,30 @@ const CONFIG = {
   /* ---------- 觸控（水平滑動）----------
    * 「向左滑」＝手指往左移動 → 下一頁；
    * 「向右滑」＝手指往右移動 → 上一頁。
+   * 在複製按鈕上開始的觸控不計為滑動。
    */
   let touchStart = null;
+
+  function isInteractiveTarget(t) {
+    return !!(t && t.closest && t.closest('button, a, input, textarea, select, .copy-btn'));
+  }
 
   stage.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) { touchStart = null; return; }
     const p = e.touches[0];
+    if (isInteractiveTarget(e.target)) { touchStart = null; return; }
     touchStart = { x: p.clientX, y: p.clientY };
   }, { passive: true });
 
-  // 阻止原生捲動、回彈及下拉重新整理
+  // 阻止原生捲動、回彈及下拉重新整理（按鈕上不攔截）
   document.addEventListener('touchmove', (e) => {
+    if (isInteractiveTarget(e.target)) return;
     if (e.cancelable) e.preventDefault();
   }, { passive: false });
 
   stage.addEventListener('touchend', (e) => {
     if (!touchStart) return;
+    if (isInteractiveTarget(e.target)) { touchStart = null; return; }
     const p = e.changedTouches[0];
     const dx = p.clientX - touchStart.x;
     const dy = p.clientY - touchStart.y;
@@ -434,7 +664,7 @@ const CONFIG = {
       case 'ArrowLeft':  case 'PageDown': step(1); break;   // 向左鍵／下頁＝下一頁（配合向左滑）
       case 'ArrowRight': case 'PageUp':   step(-1); break;  // 向右鍵／上頁＝上一頁
       case ' ': case 'Spacebar':
-        if (tag === 'BUTTON') { handled = false; break; } // 讓空白鍵可啟動圓點按鈕
+        if (tag === 'BUTTON') { handled = false; break; } // 讓空白鍵可啟動按鈕
         step(e.shiftKey ? -1 : 1); break;
       case 'Home': goTo(0); break;
       case 'End':  goTo(sections.length - 1); break;
