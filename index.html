@@ -390,7 +390,7 @@
  * （僅一頁時會隱藏圓點與「往右」。）
  * ===================================================================== */
 /* 規則：文字／圖文頁標題及副標題中的句號（。或 .）於渲染時轉為換行並再隔一行，句號不顯示；每個分句為獨立一行，句與句之間再隔一行 */
-const sentenceBreak = (t) => String(t || '').split(/[。.]/).map(x => x.trim()).filter(Boolean).join('\n');
+const sentenceBreak = (t) => String(t || '').replace(/(\d)\./g, '$1\uE000').split(/[。.]/).map(x => x.replace(/\uE000/g, '.').trim()).filter(Boolean).join('\n');
 const fillLines = (el, t) => { el.textContent=''; sentenceBreak(t).split('\n').forEach(x => { const sp=document.createElement('span'); sp.className='line'; sp.textContent=x; el.appendChild(sp); }); };
 const sections = [
   {
@@ -398,6 +398,43 @@ const sections = [
     layout: 'text-top',
     title: 'Bonnie妹😶。\n喺兩個禮拜前嘅一個夜晚，突然收到你嘅message。',
     src: 'illustrations/page1-chat.jpg',
+    alt: 'WhatsApp 對話截圖',
+  },
+  {
+    type: 'text',
+    title: '當時我好亂，不知所措，冇即刻覆到你。\n我思前想後，諗緊係咩事，去到第二日先搵返你。\n去到夜晚同你傾完電話先知原來你已經情緒崩潰。',
+  },
+  {
+    type: 'text',
+    title: '應承咗你嘅野一路拖住咗，而我喺你心目中我已經差唔多信用破產。\n我一路諗花心思去做一份禮物俾你，但係忽略咗一樣最重要嘅野：你嘅感受。',
+  },
+  {
+    type: 'text-image',
+    layout: 'text-top',
+    title: '傷咗你嘅心💔，係我經驗不足，處理得唔好，我要同你道歉，對唔住🙇‍♂️',
+    src: 'illustrations/page4-apology.jpg',
+    alt: '道歉插圖',
+  },
+  {
+    type: 'text',
+    title: '而家，我要將呢個禮物🎁親手送俾你',
+  },
+  {
+    type: 'text',
+    title: '啱啱開始喺工作上接觸認識你，你俾我嘅印象係活潑嘅大忙人，見親你都總會走黎走去。\n其中有兩件事俾我比較深刻嘅印象：。\n1. 搵唔到師傅',
+  },
+  {
+    type: 'text-image',
+    layout: 'text-top',
+    title: '2. 唔識寫GF274。',
+    src: 'illustrations/page7-gf274-comic.jpg',
+    alt: '唔識寫 GF274 四格漫畫',
+  },
+  {
+    type: 'text-image',
+    layout: 'text-top',
+    title: '但原來下次都係唔記得咗😂。',
+    src: 'illustrations/page8-chat-274.jpg',
     alt: 'WhatsApp 對話截圖',
   },
 ];
@@ -766,7 +803,7 @@ const CONFIG = {
   });
 
   /* ---------- 初始化 ---------- */
-  goTo(0);
+  { const q = parseInt(new URLSearchParams(location.search).get('p'), 10); goTo(Number.isFinite(q) ? q : 0); }
   stage.focus({ preventScroll: true });
 })();
 </script>
