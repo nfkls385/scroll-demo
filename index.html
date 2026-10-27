@@ -99,6 +99,15 @@
     overflow-wrap: anywhere;
     white-space: pre-line;
   }
+  /* 句號分句：每句獨立一行，句與句之間再隔一行；支援時平均分配行長 */
+  .slide--text .line,
+  .slide--text-image .line { display: block; word-break: normal; }
+  .slide--text .line + .line,
+  .slide--text-image .line + .line { margin-top: 1em; }
+  @supports (text-wrap: balance) {
+    .slide--text .line,
+    .slide--text-image .line { white-space: normal; text-wrap: balance; text-wrap-style: balance; }
+  }
   .slide__title::after {
     content: "";
     display: block;
@@ -119,6 +128,33 @@
     color: var(--ink-soft);
   }
 
+
+  /* 圖文頁：字上圖下（預設）或圖上字下 */
+  .slide--text-image {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(16px, 3vh, 28px);
+    padding: max(56px, calc(env(safe-area-inset-top) + 40px)) clamp(20px, 6vw, 48px) max(28px, env(safe-area-inset-bottom));
+  }
+  .slide--text-image .slide__title {
+    font-size: clamp(1.15rem, 4.6vw, 2rem);
+    letter-spacing: .03em;
+    line-height: 1.55;
+    max-width: 100%;
+    margin: 0;
+  }
+  .slide--text-image .slide__title::after { display: none; }
+  .slide--text-image .slide__image {
+    width: min(100%, 420px);
+    max-height: min(58vh, 560px);
+    height: auto;
+    object-fit: contain;
+    border-radius: clamp(12px, 2vw, 20px);
+    box-shadow: 0 12px 32px rgba(47, 42, 58, .12);
+    background: rgba(255,255,255,.55);
+  }
   /* 全屏插圖頁：contain 完整顯示，背景漸變露邊 */
   .slide--image {
     padding: max(12px, env(safe-area-inset-top)) clamp(12px, 4vw, 32px) max(12px, env(safe-area-inset-bottom));
@@ -270,6 +306,7 @@
   }
 
   /* 進度圓點（頂部置中） */
+  .dots[hidden] { display: none !important; }
   .dots {
     position: fixed;
     top: max(16px, calc(env(safe-area-inset-top) + 10px));
@@ -277,13 +314,21 @@
     transform: translateX(-50%);
     display: flex;
     flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    max-width: calc(100vw - 24px);
     margin: 0;
     padding: 0;
     list-style: none;
     z-index: 2;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
   }
+  .dots::-webkit-scrollbar { display: none; } /* Chrome / Safari */
   .dots button {
     display: block;
     width: 22px;
@@ -294,6 +339,7 @@
     cursor: pointer;
     position: relative;
     pointer-events: auto;
+    flex-shrink: 0;
   }
   .dots button::before {
     content: "";
@@ -336,14 +382,24 @@
 <script>
 /* =====================================================================
  * 內容設定 — 只需修改此陣列即可。
- *   type: 'text' | 'image' | 'choice'
- *   text    : { title, subtitle? }
- *   image   : { src, alt? }
- *   choice  : { title, options: [{ text }] }
- * 新增或刪除項目後，頁面及頂部進度圓點會自動更新。
+ *   type: 'text' | 'image' | 'text-image' | 'choice'
+ *   text       : { title, subtitle? }
+ *   image      : { src, alt? }
+ *   text-image : { title, src, alt?, layout?: 'text-top'|'image-top' }  // 預設字上圖下
+ *   choice     : { title, options: [{ text }] }
+ * （僅一頁時會隱藏圓點與「往右」。）
  * ===================================================================== */
+/* 規則：文字／圖文頁標題及副標題中的句號（。或 .）於渲染時轉為換行並再隔一行，句號不顯示；每個分句為獨立一行，句與句之間再隔一行 */
+const sentenceBreak = (t) => String(t || '').split(/[。.]/).map(x => x.trim()).filter(Boolean).join('\n');
+const fillLines = (el, t) => { el.textContent=''; sentenceBreak(t).split('\n').forEach(x => { const sp=document.createElement('span'); sp.className='line'; sp.textContent=x; el.appendChild(sp); }); };
 const sections = [
-  { type: 'text', title: '以下是一篇特別新聞報道\n羅浮宮設施殘舊\n館長要求10億歐元翻新\n否則面臨倒閉' },
+  {
+    type: 'text-image',
+    layout: 'text-top',
+    title: 'Bonnie妹😶。\n喺兩個禮拜前嘅一個夜晚，突然收到你嘅message。',
+    src: 'illustrations/page1-chat.jpg',
+    alt: 'WhatsApp 對話截圖',
+  },
 ];
 
 /* ---------------- 互動參數（一般無需修改） ---------------- */
@@ -365,7 +421,7 @@ const CONFIG = {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   function sectionLabel(s, i) {
-    if (s.type === 'image') return s.alt || `插圖 ${i + 1}`;
+    if (s.type === 'image' || s.type === 'text-image') return s.alt || s.title || `插圖 ${i + 1}`;
     if (s.type === 'choice') return s.title || `選擇 ${i + 1}`;
     return s.title || `第 ${i + 1} 頁`;
   }
@@ -435,7 +491,8 @@ const CONFIG = {
     const el = document.createElement('section');
     const isImage = s.type === 'image';
     const isChoice = s.type === 'choice';
-    el.className = isImage ? 'slide slide--image' : (isChoice ? 'slide slide--choice' : 'slide');
+    const isTextImage = s.type === 'text-image';
+    el.className = isImage ? 'slide slide--image' : (isChoice ? 'slide slide--choice' : (isTextImage ? 'slide slide--text-image' : 'slide slide--text'));
     el.setAttribute('aria-roledescription', '頁面');
     const label = sectionLabel(s, i);
     el.setAttribute('aria-label', `第 ${i + 1} 頁，共 ${sections.length} 頁：${label}`);
@@ -452,7 +509,7 @@ const CONFIG = {
     } else if (isChoice) {
       const h = document.createElement('h2');
       h.className = 'slide__title';
-      h.textContent = s.title || '';
+      fillLines(h, s.title);
       el.appendChild(h);
 
       const ul = document.createElement('ul');
@@ -484,16 +541,43 @@ const CONFIG = {
         ul.appendChild(li);
       });
       el.appendChild(ul);
+    } else if (s.type === 'text-image') {
+      const layout = s.layout || 'text-top'; // text-top | image-top
+      el.className = 'slide slide--text-image slide--text-image--' + layout;
+
+      const makeTitle = () => {
+        const h = document.createElement(i === 0 ? 'h1' : 'h2');
+        h.className = 'slide__title';
+        fillLines(h, s.title);
+        return h;
+      };
+      const makeImg = () => {
+        const img = document.createElement('img');
+        img.className = 'slide__image';
+        img.dataset.src = s.src;
+        img.alt = s.alt || '';
+        img.decoding = 'async';
+        img.loading = 'lazy';
+        img.draggable = false;
+        return img;
+      };
+      if (layout === 'image-top') {
+        el.appendChild(makeImg());
+        el.appendChild(makeTitle());
+      } else {
+        el.appendChild(makeTitle());
+        el.appendChild(makeImg());
+      }
     } else {
       const h = document.createElement(i === 0 ? 'h1' : 'h2');
       h.className = 'slide__title';
-      h.textContent = s.title || '';
+      fillLines(h, s.title);
       el.appendChild(h);
 
       if (s.subtitle && String(s.subtitle).trim()) {
         const p = document.createElement('p');
         p.className = 'slide__subtitle';
-        p.textContent = s.subtitle;
+        fillLines(p, s.subtitle);
         el.appendChild(p);
       }
     }
