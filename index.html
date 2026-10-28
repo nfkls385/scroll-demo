@@ -129,33 +129,48 @@
   }
 
 
-  /* 圖文頁：字上圖下（預設）或圖上字下；左右收窄，漫畫／插圖盡量用滿手機闊度 */
+  /* 圖文頁：字上圖下（預設）或圖上字下 */
   .slide--text-image {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: center;
     align-items: center;
-    gap: clamp(10px, 1.8vh, 18px);
-    padding: max(44px, calc(env(safe-area-inset-top) + 28px)) 4px max(8px, env(safe-area-inset-bottom));
+    gap: clamp(16px, 3vh, 28px);
+    padding: max(56px, calc(env(safe-area-inset-top) + 40px)) clamp(20px, 6vw, 48px) max(28px, env(safe-area-inset-bottom));
   }
   .slide--text-image .slide__title {
     font-size: clamp(1.15rem, 4.6vw, 2rem);
     letter-spacing: .03em;
     line-height: 1.55;
-    max-width: min(100%, 22em);
+    max-width: 100%;
     margin: 0;
-    padding: 0 8px; /* caption 略留邊，圖本身可更貼邊 */
   }
   .slide--text-image .slide__title::after { display: none; }
   .slide--text-image .slide__image {
-    /* 用 max 約束等比縮放，避免 width:100% + contain 左右 letterbox */
+    width: min(100%, 420px);
+    max-height: min(58vh, 560px);
+    height: auto;
+    object-fit: contain;
+    border-radius: clamp(12px, 2vw, 20px);
+    box-shadow: 0 12px 32px rgba(47, 42, 58, .12);
+    background: rgba(255,255,255,.55);
+  }
+  /* 直長漫畫等：收窄左右留白、放大顯示（僅加 is-wide-media 嘅頁） */
+  .slide--text-image.is-wide-media {
+    justify-content: flex-start;
+    gap: clamp(10px, 1.8vh, 18px);
+    padding: max(44px, calc(env(safe-area-inset-top) + 28px)) 4px max(8px, env(safe-area-inset-bottom));
+  }
+  .slide--text-image.is-wide-media .slide__title {
+    max-width: min(100%, 22em);
+    padding: 0 8px;
+  }
+  .slide--text-image.is-wide-media .slide__image {
     width: auto;
     max-width: 100%;
     height: auto;
     max-height: calc(100dvh - 5.25rem);
-    object-fit: contain;
     border-radius: clamp(10px, 2vw, 16px);
-    box-shadow: 0 12px 32px rgba(47, 42, 58, .12);
     background: transparent;
   }
   /* 全屏插圖頁：contain 完整顯示，背景漸變露邊 */
@@ -388,7 +403,7 @@
  *   type: 'text' | 'image' | 'text-image' | 'choice'
  *   text       : { title, subtitle? }
  *   image      : { src, alt? }
- *   text-image : { title, src, alt?, layout?: 'text-top'|'image-top' }  // 預設字上圖下
+ *   text-image : { title, src, alt?, layout?: 'text-top'|'image-top', wideMedia?: true }  // 預設字上圖下；wideMedia＝直長圖放大
  *   choice     : { title, options: [{ text }] }
  * （僅一頁時會隱藏圓點與「往右」。）
  * ===================================================================== */
@@ -429,6 +444,7 @@ const sections = [
   {
     type: 'text-image',
     layout: 'text-top',
+    wideMedia: true,
     title: '2. 唔識寫GF274。',
     src: 'illustrations/page7-gf274-comic.jpg',
     alt: '唔識寫 GF274 四格漫畫',
@@ -583,7 +599,7 @@ const CONFIG = {
       el.appendChild(ul);
     } else if (s.type === 'text-image') {
       const layout = s.layout || 'text-top'; // text-top | image-top
-      el.className = 'slide slide--text-image slide--text-image--' + layout;
+      el.className = 'slide slide--text-image slide--text-image--' + layout + (s.wideMedia ? ' is-wide-media' : '');
 
       const makeTitle = () => {
         const h = document.createElement(i === 0 ? 'h1' : 'h2');
