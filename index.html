@@ -129,29 +129,31 @@
   }
 
 
-  /* 圖文頁：字上圖下（預設）或圖上字下 */
+  /* 圖文頁：字上圖下（預設）或圖上字下；左右收窄，漫畫／插圖盡量用滿手機闊度 */
   .slide--text-image {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
-    gap: clamp(16px, 3vh, 28px);
-    padding: max(56px, calc(env(safe-area-inset-top) + 40px)) clamp(20px, 6vw, 48px) max(28px, env(safe-area-inset-bottom));
+    gap: clamp(10px, 1.8vh, 18px);
+    padding: max(48px, calc(env(safe-area-inset-top) + 32px)) 8px max(12px, env(safe-area-inset-bottom));
   }
   .slide--text-image .slide__title {
     font-size: clamp(1.15rem, 4.6vw, 2rem);
     letter-spacing: .03em;
     line-height: 1.55;
-    max-width: 100%;
+    max-width: min(100%, 22em);
     margin: 0;
+    padding: 0 8px; /* caption 略留邊，圖本身可更貼邊 */
   }
   .slide--text-image .slide__title::after { display: none; }
   .slide--text-image .slide__image {
-    width: min(100%, 420px);
-    max-height: min(58vh, 560px);
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 7rem);
     height: auto;
     object-fit: contain;
-    border-radius: clamp(12px, 2vw, 20px);
+    border-radius: clamp(10px, 2vw, 16px);
     box-shadow: 0 12px 32px rgba(47, 42, 58, .12);
     background: rgba(255,255,255,.55);
   }
