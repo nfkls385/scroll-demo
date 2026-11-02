@@ -155,21 +155,28 @@
     box-shadow: 0 12px 32px rgba(47, 42, 58, .12);
     background: rgba(255,255,255,.55);
   }
-  /* 直長漫畫等：收窄左右留白、放大顯示（僅加 is-wide-media 嘅頁） */
+  /* 直長漫畫等：收窄左右留白、放大顯示；標題+圖垂直置中（僅加 is-wide-media 嘅頁） */
   .slide--text-image.is-wide-media {
     justify-content: center;
     gap: clamp(10px, 1.8vh, 18px);
-    padding: max(40px, calc(env(safe-area-inset-top) + 24px)) 4px max(16px, env(safe-area-inset-bottom));
+    /* 上下近似對稱，頂部仍要清開圓點 */
+    padding: max(48px, calc(env(safe-area-inset-top) + 28px)) 4px max(48px, calc(env(safe-area-inset-bottom) + 28px));
   }
   .slide--text-image.is-wide-media .slide__title {
     max-width: min(100%, 22em);
     padding: 0 8px;
+    flex: 0 0 auto;
   }
   .slide--text-image.is-wide-media .slide__image {
     width: auto;
     max-width: 100%;
     height: auto;
-    max-height: calc(100dvh - 5.25rem);
+    /* 留空間俾標題 + 上下邊距，唔好幾乎塞滿視窗（否則 flex center 無效） */
+    max-height: min(62vh, calc(100dvh - 11rem));
+    flex: 0 1 auto;
+    min-height: 0;
+    object-fit: contain;
+    margin-inline: auto;
     border-radius: clamp(10px, 2vw, 16px);
     background: transparent;
   }
