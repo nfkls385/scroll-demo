@@ -411,51 +411,37 @@
 const sentenceBreak = (t) => String(t || '').replace(/(\d)\./g, '$1\uE000').split(/[。.]/).map(x => x.replace(/\uE000/g, '.').trim()).filter(Boolean).join('\n');
 const fillLines = (el, t) => { el.textContent=''; sentenceBreak(t).split('\n').forEach(x => { const sp=document.createElement('span'); sp.className='line'; sp.textContent=x; el.appendChild(sp); }); };
 const sections = [
-  {
-    type: 'text-image',
-    layout: 'text-top',
-    title: 'Bonnie妹😶。\n喺兩個禮拜前嘅一個夜晚，突然收到你嘅message。',
-    src: 'illustrations/page1-chat.jpg',
-    alt: 'WhatsApp 對話截圖',
-  },
-  {
-    type: 'text',
-    title: '當時我好亂，不知所措，冇即刻覆到你。\n我思前想後，諗緊係咩事，去到第二日先搵返你。\n去到夜晚同你傾完電話先知原來你已經情緒崩潰。',
-  },
-  {
-    type: 'text',
-    title: '應承咗你嘅野一路拖住咗，而我喺你心目中我已經差唔多信用破產。\n我一路諗花心思去做一份禮物俾你，但係忽略咗一樣最重要嘅野：你嘅感受。',
-  },
-  {
-    type: 'text-image',
-    layout: 'text-top',
-    title: '傷咗你嘅心💔，係我經驗不足，處理得唔好，我要同你道歉，對唔住🙇‍♂️',
-    src: 'illustrations/page4-apology.jpg',
-    alt: '道歉插圖',
-  },
-  {
-    type: 'text',
-    title: '而家，我要將呢個禮物🎁親手送俾你',
-  },
-  {
-    type: 'text',
-    title: '啱啱開始喺工作上接觸認識你，你俾我嘅印象係活潑嘅大忙人，見親你都總會走黎走去。\n其中有兩件事俾我比較深刻嘅印象：。\n1. 搵唔到師傅',
-  },
-  {
-    type: 'text-image',
-    layout: 'text-top',
-    wideMedia: true,
-    title: '2. 唔識寫GF274。',
-    src: 'illustrations/page7-gf274-comic.jpg',
-    alt: '唔識寫 GF274 四格漫畫',
-  },
-  {
-    type: 'text-image',
-    layout: 'text-top',
-    title: '但原來下次都係唔記得咗😂。',
-    src: 'illustrations/page8-chat-274.jpg',
-    alt: 'WhatsApp 對話截圖',
-  },
+  { type: "text", title: "Bonnie妹😶。\n唔好意思🫡，要你等咁耐，請你細心睇完。" },
+  { type: "text-image", layout: "text-top", wideMedia: true, title: "喺某個夜晚，突然收到你嘅message。", src: "illustrations/p02.jpg", alt: "WhatsApp 訊息截圖" },
+  { type: "text", title: "當時聞到有味，但個心好亂，不知所措，冇即刻覆到你。\n我思前想後，諗緊係咩事，去到第二日先搵返你。\n去到夜晚同你傾完電話先知原來你已經情緒崩潰。" },
+  { type: "text", title: "你一直俾機會我，但我應承咗你嘅野一路拖住咗，喺你心目中我已經差唔多信用破產。\n我一路諗花心思去做一份禮物俾你，但係忽略咗一樣最重要嘅野：你嘅感受。" },
+  { type: "text-image", layout: "text-top", title: "傷咗你嘅心💔，係我經驗不足，處理得唔好，對唔住，請你原諒我🙇‍♂️", src: "illustrations/p05.jpg", alt: "道歉插畫" },
+  { type: "text", title: "而家，我要將呢份禮物🎁 送俾你" },
+  { type: "text", title: "啱啱開始喺工作上接觸認識你，你俾我嘅印象係活潑嘅大忙人，見親你都總會走黎走去。\n其中有兩件事俾我比較深刻嘅印象..." },
+  { type: "text-image", layout: "text-top", wideMedia: true, title: "1. 唔識寫GF274。", src: "illustrations/p08.jpg", alt: "GF274 四格漫畫" },
+  { type: "text-image", layout: "text-top", wideMedia: true, title: "但原來下次都係唔記得咗😂。", src: "illustrations/p09.jpg", alt: "WhatsApp 截圖" },
+  { type: "text-image", layout: "text-top", wideMedia: true, title: "搵唔到師傅", src: "illustrations/p10.jpg", alt: "搵師傅四格" },
+  { type: "text", title: "發現原來你係一個幾搞笑同可愛嘅人。\n我地由食開始講起，越傾越多野，最後你拎咗我電話，亦都交換咗年齡嘅秘密，原來你只係細我幾個月，傾吓傾吓就約咗出黎見面" },
+  { type: "text", title: "記得第一次約你，你第一眼俾我嘅感覺同平時返工唔同，着出街衫同化咗妝嘅差別好大。\n當日去到約會地點之前突然收到急call要返工，心諗你應該會覺得我玩野放飛機✈️，但你居然話同我一齊返柴灣" },
+  { type: "text-image", layout: "text-top", title: "做完野之後打俾你，好耐都冇聽，心諗都知咩事，正當諗住放棄嘅時候，你終於接電話，原來只係訓咗覺，之後真係出咗黎，趕去睇戲同食晚飯", src: "illustrations/p13.jpg", alt: "戲院" },
+  { type: "text-image", layout: "text-top", title: "返到屋企之後你話下次請返我食飯，估唔到咁嘅first date體驗仲會有下次。\n嗰日真係好開心，係我第一次約女仔出黎。", src: "illustrations/p14.jpg", alt: "拿手機開心" },
+  { type: "text", title: "約咗幾次之後，你話我地唔係普通朋友。\n當時我覺得又興奮又愕然，原來你係咁直接。\n之後同你繼續約會，去咗好多地方，做咗唔少野" },
+  { type: "text-image", layout: "text-top", title: "睇戲", src: "illustrations/p16.jpg", alt: "睇戲" },
+  { type: "text-image", layout: "text-top", title: "赤柱行沙灘，亦都係第一次拖你隻手", src: "illustrations/p17.jpg", alt: "沙灘" },
+  { type: "text-image", layout: "text-top", title: "玩貓", src: "illustrations/p18.jpg", alt: "玩貓" },
+  { type: "text-image", layout: "text-top", title: "溜冰", src: "illustrations/p19.jpg", alt: "溜冰" },
+  { type: "text-image", layout: "text-top", title: "玩飄移車", src: "illustrations/p20.jpg", alt: "飄移車" },
+  { type: "text-image", layout: "text-top", title: "仲有睇展，睇花燈，好多好多。\n其中最鍾意就係同你食完飯行吓海旁。", src: "illustrations/p21.jpg", alt: "海旁" },
+  { type: "text-image", layout: "text-top", title: "同埋坐公園傾計。", src: "illustrations/p22.jpg", alt: "公園" },
+  { type: "text", title: "我地分享咗大家嘅背景同故事，\n慢慢我地了解對方越黎越多，原來你好細心，好多輕輕提過嘅野你都會記得" },
+  { type: "text-image", layout: "text-top", title: "到你生日，你選擇咗同我一齊過，我就知道我喺你心入面嘅地位。", src: "illustrations/p24.jpg", alt: "生日甜品" },
+  { type: "text", title: "第二日你同我講要確認關係，當時我覺得大家認識唔係好耐，了解得未夠多，所以就話繼續努力💪" },
+  { type: "text", title: "跟住你同我分享咗你嘅感情經歷，有啲估唔到你上一段拍咗咁耐，因為你話好多地方都冇去過同冇試過" },
+  { type: "text", title: "隔咗好耐喺最近先同你分享我嘅感情經歷，因為我唔敢俾你知A0, 怕醜同社恐，怕俾你笑，所以拖咗好耐先講。\n但講完你冇笑我，亦都冇介意，仲不斷鼓勵我同俾信心我，令我非常感動🥹。" },
+  { type: "text", title: "我有嘗試表達對你嘅心意，但講講吓總會俾一啲事剎停咗。\n之後有好多諗法，最後我選擇做咗呢個網站" },
+  { type: "text", title: "Bonnie妹，多謝你，喺呢段時間入面，帶我解鎖咁多新野，每一次同你相處都覺得好開心，好舒服，好放鬆，係你令嘅我生命有更多色彩。" },
+  { type: "text", title: "喺感情路上，我係一個新手，未試過，亦好多野唔識，但我應承你，我會努力去學，優先照顧你嘅情緒，令你開心，幸福。最後..." },
+  { type: "text", title: "想邀請你同我將呢個故事延續落去，一齊經歷，一齊成長。\n你願唔願意做我女朋友呀？🥺" }
 ];
 
 /* ---------------- 互動參數（一般無需修改） ---------------- */
