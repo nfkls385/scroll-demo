@@ -418,6 +418,11 @@
 const sentenceBreak = (t) => String(t || '').replace(/(\d)\./g, '$1\uE000').split(/[。.]/).map(x => x.replace(/\uE000/g, '.').trim()).filter(Boolean).join('\n');
 const fillLines = (el, t) => { el.textContent=''; sentenceBreak(t).split('\n').forEach(x => { const sp=document.createElement('span'); sp.className='line'; sp.textContent=x; el.appendChild(sp); }); };
 const sections = [
+  { type: "choice", title: "今晚食咩？", options: [
+    { text: "壽司" },
+    { text: "火鍋" },
+    { text: "意粉" },
+  ] },
   { type: "text", title: "Bonnie妹😶。\n唔好意思🫡，要你等咁耐，請你細心睇完。" },
   { type: "text-image", layout: "text-top", wideMedia: true, title: "喺某個夜晚，突然收到你嘅message。", src: "illustrations/p02.jpg", alt: "WhatsApp 訊息截圖" },
   { type: "text", title: "當時聞到有味，但個心好亂，不知所措，冇即刻覆到你。\n我思前想後，諗緊係咩事，去到第二日先搵返你。\n去到夜晚同你傾完電話先知原來你已經情緒崩潰。" },
