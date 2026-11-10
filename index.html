@@ -393,7 +393,7 @@
  *   text       : { title, subtitle? }
  *   image      : { src, alt? }
  *   text-image : { title, src, alt?, layout?: 'text-top'|'image-top', wideMedia?: true }  // 預設字上圖下；wideMedia＝直長圖放大
- *   choice     : { title, options: [{ text }] }  // 單選變色；刷新清空；唔複製、唔提交
+ *   choice     : { title, options: [{ text }], afterSelect?: { [原文|index]: string[] } | string[][] }  // 單選變色；可選「選後」標籤列表；刷新清空；唔複製、唔提交
  * （僅一頁時會隱藏圓點與「往右」。）
  * ===================================================================== */
 /* 規則：文字／圖文頁標題及副標題中的句號（。或 .）於渲染時轉為換行並再隔一行，句號不顯示；每個分句為獨立一行，句與句之間再隔一行 */
@@ -403,8 +403,10 @@ const sections = [
   { type: "choice", title: "今晚食咩？", options: [
     { text: "壽司" },
     { text: "火鍋" },
-    { text: "意粉" },
-  ] },
+  ], afterSelect: {
+    "壽司": ["就壽司啦", "唔食"],
+    "火鍋": ["唔食", "就火鍋啦"],
+  } },
   { type: "text", title: "Bonnie妹😶。\n唔好意思🫡，要你等咁耐，請你細心睇完。" },
   { type: "text-image", layout: "text-top", wideMedia: true, title: "喺某個夜晚，突然收到你嘅message。", src: "illustrations/p02.jpg", alt: "WhatsApp 訊息截圖" },
   { type: "text", title: "當時聞到有味，但個心好亂，不知所措，冇即刻覆到你。\n我思前想後，諗緊係咩事，去到第二日先搵返你。\n去到夜晚同你傾完電話先知原來你已經情緒崩潰。" },
@@ -469,22 +471,46 @@ const CONFIG = {
     el.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
   }
 
-  function bindChoiceGroup(listEl) {
+  function resolveAfterLabels(section, selectedIndex) {
+    const opts = section.options || [];
+    const selected = opts[selectedIndex] || {};
+    const map = section.afterSelect;
+    let raw = null;
+    if (Array.isArray(selected.after)) raw = selected.after;
+    else if (Array.isArray(map)) raw = map[selectedIndex];
+    else if (map && typeof map === 'object') {
+      raw = map[selectedIndex] ?? map[String(selectedIndex)] ?? map[selected.text];
+    }
+    if (!Array.isArray(raw)) return null; // 呢項冇選後：回復原文
+    return opts.map((opt, i) => {
+      const item = raw[i];
+      if (item == null || item === '') return opt.text || '';
+      return typeof item === 'string' ? item : (item.text || opt.text || '');
+    });
+  }
+
+  function bindChoiceGroup(listEl, section) {
     const items = () => [...listEl.querySelectorAll('.choice-item')];
+    const originals = (section.options || []).map((opt) => opt.text || '');
     isolateFromSwipe(listEl);
-    const select = (btn) => {
-      items().forEach((b) => {
-        const on = b === btn;
+    const applySelection = (selectedIndex) => {
+      const labels = resolveAfterLabels(section, selectedIndex) || originals;
+      items().forEach((b, i) => {
+        const on = i === selectedIndex;
         b.classList.toggle('is-selected', on);
         b.setAttribute('aria-checked', on ? 'true' : 'false');
+        const next = labels[i] || originals[i] || '';
+        const txt = b.querySelector('.choice-text');
+        if (txt) txt.textContent = next;
+        b.setAttribute('aria-label', next);
       });
     };
-    items().forEach((btn) => {
+    items().forEach((btn, oi) => {
       isolateFromSwipe(btn);
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        select(btn);
+        applySelection(oi);
       });
     });
   }
@@ -545,7 +571,7 @@ const CONFIG = {
         li.appendChild(btn);
         ul.appendChild(li);
       });
-      bindChoiceGroup(ul);
+      bindChoiceGroup(ul, s);
       el.appendChild(ul);
     } else if (s.type === 'text-image') {
       const layout = s.layout || 'text-top'; // text-top | image-top
